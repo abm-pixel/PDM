@@ -1,0 +1,1517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDM Studio - Precedence Diagram Method Generator</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Mermaid -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        /* Color Themes CSS Variables */
+        :root {
+            /* Midnight Slate Theme (Default) */
+            --bg-app: #0b0f19;
+            --bg-sidebar: #111827;
+            --bg-card: #1f2937;
+            --border-primary: #374151;
+            --text-primary: #f9fafb;
+            --text-secondary: #9ca3af;
+            --color-critical: #f43f5e;
+            --color-normal: #38bdf8;
+            --glow-critical: rgba(244, 63, 94, 0.35);
+            --glow-normal: rgba(56, 189, 248, 0.15);
+            --accent: #6366f1;
+            --bg-viewport: #030712;
+            --bg-sub: rgba(17, 24, 39, 0.9);
+            --scrollbar-bg: #1f2937;
+            --scrollbar-thumb: #4b5563;
+        }
+
+        body.theme-cyberpunk {
+            --bg-app: #030308;
+            --bg-sidebar: #090912;
+            --bg-card: #121226;
+            --border-primary: #ec4899;
+            --text-primary: #ffffff;
+            --text-secondary: #a7a7d1;
+            --color-critical: #ff0055;
+            --color-normal: #00f0ff;
+            --glow-critical: rgba(255, 0, 85, 0.55);
+            --glow-normal: rgba(0, 240, 255, 0.35);
+            --accent: #eab308;
+            --bg-viewport: #010103;
+            --bg-sub: rgba(9, 9, 18, 0.9);
+            --scrollbar-bg: #121226;
+            --scrollbar-thumb: #ec4899;
+        }
+
+        body.theme-emerald {
+            --bg-app: #04100c;
+            --bg-sidebar: #061f18;
+            --bg-card: #0c2d23;
+            --border-primary: #15803d;
+            --text-primary: #ecfdf5;
+            --text-secondary: #a7f3d0;
+            --color-critical: #fb7185;
+            --color-normal: #10b981;
+            --glow-critical: rgba(251, 113, 133, 0.4);
+            --glow-normal: rgba(16, 185, 129, 0.25);
+            --accent: #34d399;
+            --bg-viewport: #020a07;
+            --bg-sub: rgba(6, 31, 24, 0.9);
+            --scrollbar-bg: #0c2d23;
+            --scrollbar-thumb: #15803d;
+        }
+
+        body.theme-light {
+            --bg-app: #f8fafc;
+            --bg-sidebar: #ffffff;
+            --bg-card: #f1f5f9;
+            --border-primary: #cbd5e1;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --color-critical: #e11d48;
+            --color-normal: #0284c7;
+            --glow-critical: rgba(225, 29, 72, 0.15);
+            --glow-normal: rgba(2, 132, 199, 0.1);
+            --accent: #2563eb;
+            --bg-viewport: #f8fafc;
+            --bg-sub: rgba(241, 250, 255, 0.95);
+            --scrollbar-bg: #e2e8f0;
+            --scrollbar-thumb: #94a3b8;
+        }
+
+        /* Core Styles */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-app);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* Scrollbars styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--scrollbar-bg);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--scrollbar-thumb);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            opacity: 0.8;
+        }
+
+        /* Layout Structure */
+        header {
+            height: 64px;
+            background-color: var(--bg-sidebar);
+            border-bottom: 1px solid var(--border-primary);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            z-index: 10;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .header-title-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            color: var(--color-normal);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .header-title-container h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--text-primary), var(--text-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-subtitle {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        /* Stats Widget */
+        .stats-container {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .stat-val {
+            font-family: 'Outfit', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--color-normal);
+        }
+        .stat-val.critical {
+            color: var(--color-critical);
+        }
+
+        .stat-lbl {
+            font-size: 9px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+        }
+
+        /* Main Workspace Workspace */
+        .workspace {
+            flex: 1;
+            display: flex;
+            flex-direction: row;
+            overflow: hidden;
+        }
+
+        /* Sidebar Control Panel */
+        .sidebar {
+            width: 400px;
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border-primary);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+            z-index: 5;
+        }
+
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 18px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .card-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-primary);
+        }
+
+        .input-meta-links {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 11px;
+        }
+
+        .input-meta-link {
+            color: var(--color-normal);
+            text-decoration: none;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .input-meta-link:hover {
+            text-decoration: underline;
+        }
+
+        textarea {
+            width: 100%;
+            height: 180px;
+            background-color: var(--bg-app);
+            border: 1px solid var(--border-primary);
+            border-radius: 8px;
+            padding: 12px;
+            color: var(--text-primary);
+            font-family: monospace;
+            font-size: 12px;
+            resize: none;
+            outline: none;
+            line-height: 1.5;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        textarea:focus {
+            border-color: var(--color-normal);
+            box-shadow: 0 0 8px var(--glow-normal);
+        }
+
+        /* Preset selector */
+        .preset-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .preset-btn {
+            background-color: var(--bg-app);
+            border: 1px solid var(--border-primary);
+            color: var(--text-secondary);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .preset-btn:hover {
+            border-color: var(--color-normal);
+            color: var(--text-primary);
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        /* Visual Settings Form Controls */
+        .settings-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        select {
+            background-color: var(--bg-app);
+            border: 1px solid var(--border-primary);
+            border-radius: 6px;
+            padding: 8px 10px;
+            color: var(--text-primary);
+            font-size: 12px;
+            outline: none;
+            cursor: pointer;
+            width: 100%;
+        }
+        select:focus {
+            border-color: var(--color-normal);
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), #4f46e5);
+            color: white;
+            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.25);
+        }
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 14px rgba(99, 102, 241, 0.35);
+        }
+        .btn-primary:active {
+            transform: translateY(1px);
+        }
+
+        /* Viewport Diagram Area */
+        .viewport {
+            flex: 1;
+            background-color: var(--bg-viewport);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Diagram wrapper for zoom/pan */
+        .diagram-container-wrapper {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+            cursor: grab;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .diagram-container-wrapper:active {
+            cursor: grabbing;
+        }
+
+        #diagram {
+            transform-origin: 0 0;
+            transition: transform 0.08s ease-out;
+            user-select: none;
+        }
+
+        /* Floating controls widgets */
+        .floating-controls {
+            position: absolute;
+            bottom: 24px;
+            left: 24px;
+            display: flex;
+            gap: 8px;
+            background-color: var(--bg-sub);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-primary);
+            border-radius: 8px;
+            padding: 6px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            z-index: 4;
+        }
+
+        .float-btn {
+            background: transparent;
+            border: none;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-primary);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .float-btn:hover {
+            background-color: rgba(255, 255, 255, 0.08);
+            color: var(--color-normal);
+        }
+
+        /* Export toolbar */
+        .export-toolbar {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            display: flex;
+            gap: 8px;
+            z-index: 4;
+        }
+
+        .export-btn {
+            background-color: var(--bg-sub);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-primary);
+            color: var(--text-primary);
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+        .export-btn:hover {
+            border-color: var(--color-normal);
+            color: var(--color-normal);
+            transform: translateY(-1px);
+        }
+
+        /* Notification Toast */
+        .toast {
+            position: absolute;
+            top: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background-color: var(--bg-card);
+            border-left: 4px solid var(--color-normal);
+            color: var(--text-primary);
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+            opacity: 0;
+        }
+        .toast.error {
+            border-left-color: var(--color-critical);
+        }
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        /* ------------------------------------------------------------- */
+        /* CUSTOM PDM NODE HTML/CSS STYLING (Rendered inside Mermaid)    */
+        /* ------------------------------------------------------------- */
+        foreignObject {
+            overflow: visible !important;
+        }
+
+        .pdm-node-table {
+            border-collapse: collapse;
+            width: 250px;
+            background-color: var(--bg-card);
+            border: 2px solid var(--border-primary);
+            border-radius: 8px;
+            overflow: hidden;
+            font-family: 'Inter', system-ui, sans-serif;
+            color: var(--text-primary);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            transition: all 0.25s ease;
+            pointer-events: auto !important;
+        }
+
+        .pdm-node-table:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        /* Critical vs Normal path node styling */
+        .pdm-node-table.critical {
+            border-color: var(--color-critical);
+            box-shadow: 0 0 15px var(--glow-critical);
+        }
+        .pdm-node-table.critical:hover {
+            box-shadow: 0 0 25px var(--glow-critical), 0 12px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .pdm-node-table.normal:hover {
+            border-color: var(--color-normal);
+            box-shadow: 0 0 15px var(--glow-normal), 0 12px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        /* Inner cell styles */
+        .pdm-cell {
+            border: 1px solid var(--border-primary);
+            padding: 5px 6px;
+            text-align: center;
+            font-size: 11px;
+            line-height: 1.2;
+            vertical-align: middle;
+            transition: border-color 0.25s ease;
+        }
+
+        .pdm-node-table.critical .pdm-cell {
+            border-color: rgba(244, 63, 94, 0.25);
+        }
+
+        /* First row cells styling */
+        .cell-item {
+            font-weight: 700;
+            background: var(--bg-sub);
+            color: var(--color-normal);
+        }
+        .pdm-node-table.critical .cell-item {
+            color: var(--color-critical);
+        }
+
+        .cell-node {
+            background: var(--bg-sub);
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .cell-duration {
+            font-weight: 700;
+            background: var(--bg-sub);
+            color: var(--text-primary);
+        }
+
+        /* Middle Row - Activity description styling */
+        .cell-desc {
+            font-size: 13px;
+            font-weight: 600;
+            background: var(--bg-card);
+            padding: 12px 6px;
+            color: var(--text-primary);
+            min-height: 42px;
+            height: 42px;
+            line-height: 1.3;
+        }
+
+        /* Bottom rows - Early and Late Start/Finish styling */
+        .cell-es, .cell-ef {
+            background: rgba(16, 185, 129, 0.03);
+            color: #34d399; /* emerald-400 */
+        }
+        .cell-ls, .cell-lf {
+            background: rgba(245, 158, 11, 0.03);
+            color: #fbbf24; /* amber-400 */
+        }
+
+        /* Vertical alignment helpers for node layout */
+        .cell-val {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            font-family: 'Outfit', sans-serif;
+            margin-bottom: 2px;
+        }
+
+        .cell-lbl {
+            display: block;
+            font-size: 7.5px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            opacity: 0.5;
+        }
+
+        /* Responsive styling for workspace stack on tablets/mobiles */
+        @media (max-width: 1024px) {
+            body {
+                overflow-y: auto;
+                height: auto;
+            }
+            .workspace {
+                flex-direction: column;
+                height: auto;
+                overflow: visible;
+            }
+            .sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid var(--border-primary);
+                height: auto;
+                overflow-y: visible;
+            }
+            .viewport {
+                height: 600px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header bar -->
+    <header>
+        <div class="header-title-container">
+            <div class="logo-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="6" height="6" rx="1" />
+                    <rect x="15" y="3" width="6" height="6" rx="1" />
+                    <rect x="9" y="15" width="6" height="6" rx="1" />
+                    <path d="M6 9v6M18 9v6M9 6h6M15 18h3M6 15h3" />
+                </svg>
+            </div>
+            <div>
+                <h1>PDM Studio</h1>
+                <div class="header-subtitle">Precedence Diagram Method Generator</div>
+            </div>
+        </div>
+
+        <!-- Project Statistics Widget -->
+        <div class="stats-container">
+            <div class="stat-item">
+                <span class="stat-val" id="statDuration">0</span>
+                <span class="stat-lbl">Project Duration</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-val" id="statNodes">0</span>
+                <span class="stat-lbl">Total Tasks</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-val critical" id="statCritical">0</span>
+                <span class="stat-lbl">Critical Path Tasks</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-val" id="statEfficiency">0%</span>
+                <span class="stat-lbl">Critical Ratio</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Workspace -->
+    <div class="workspace">
+        <!-- Sidebar Controls -->
+        <div class="sidebar">
+            <!-- Data input card -->
+            <div class="card">
+                <div class="card-title">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="16" y1="13" x2="8" y2="13" />
+                        <line x1="16" y1="17" x2="8" y2="17" />
+                        <polyline points="10 9 9 9 8 9" />
+                    </svg>
+                    Activity Data CSV
+                </div>
+                <div class="input-meta-links">
+                    <span class="input-meta-link" onclick="showHelp()">Format Help</span>
+                    <span class="input-meta-link" onclick="clearInput()">Clear Data</span>
+                </div>
+                <textarea id="activityInput" placeholder="A1, Setup, 0, 5, 0, 5..." spellcheck="false">A1, 10, Setup, 0, 5, 0, 5
+B1, 20, Design, 5, 15, 5, 15
+C1, 30, Logic, 15, 30, 15, 30
+D1, 40, QA, 15, 23, 22, 30
+E1, 50, Release, 30, 35, 30, 35</textarea>
+                
+                <div class="preset-buttons">
+                    <button class="preset-btn" onclick="loadPreset(1)">
+                        <span>Standard Linear Flow</span>
+                        <small>5 Activities</small>
+                    </button>
+                    <button class="preset-btn" onclick="loadPreset(2)">
+                        <span>Multi-Path Parallel Project</span>
+                        <small>6 Activities</small>
+                    </button>
+                    <button class="preset-btn" onclick="loadPreset(3)">
+                        <span>Complex Design Workflow</span>
+                        <small>6 Activities</small>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Visual Settings Card -->
+            <div class="card">
+                <div class="card-title">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <circle cx="12" cy="12" r="3" />
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                    </svg>
+                    Settings & Layout
+                </div>
+                <div class="settings-grid">
+                    <div class="control-group">
+                        <label for="themeSelect">Color Theme</label>
+                        <select id="themeSelect" onchange="changeTheme()">
+                            <option value="midnight">Midnight Slate</option>
+                            <option value="cyberpunk">Cyberpunk Neon</option>
+                            <option value="emerald">Forest Emerald</option>
+                            <option value="light">Classic Light</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label for="directionSelect">Layout Flow</label>
+                        <select id="directionSelect" onchange="generatePDM()">
+                            <option value="LR">Left to Right</option>
+                            <option value="TB">Top to Bottom</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="action-buttons">
+                <button class="btn btn-primary" onclick="generatePDM()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <polyline points="23 4 23 10 17 10" />
+                        <polyline points="1 20 1 14 7 14" />
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                    </svg>
+                    Render Diagram
+                </button>
+            </div>
+        </div>
+
+        <!-- Right Viewport -->
+        <div class="viewport">
+            <!-- Export buttons -->
+            <div class="export-toolbar">
+                <button class="export-btn" onclick="copyMermaidCode()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                    </svg>
+                    Copy Mermaid
+                </button>
+                <button class="export-btn" onclick="downloadSVG()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    SVG
+                </button>
+                <button class="export-btn" onclick="downloadPNG()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    PNG
+                </button>
+            </div>
+
+            <!-- SVG Diagram Wrapper with Zoom/Pan -->
+            <div class="diagram-container-wrapper" id="diagramWrapper">
+                <div id="diagram" class="mermaid"></div>
+            </div>
+
+            <!-- Floating Viewport Controls -->
+            <div class="floating-controls">
+                <button class="float-btn" onclick="adjustZoom(1.2)" title="Zoom In">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <line x1="12" y1="5" x2="12" y2="19" />
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                </button>
+                <button class="float-btn" onclick="adjustZoom(0.8)" title="Zoom Out">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                </button>
+                <button class="float-btn" onclick="resetZoom()" title="Reset Zoom">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M15 3h6v6" />
+                        <path d="M9 21H3v-6" />
+                        <path d="M21 3l-7 7" />
+                        <path d="M3 21l7-7" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" id="toastIcon">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="16" x2="12" y2="12" />
+            <line x1="12" y1="8" x2="12.01" y2="8" />
+        </svg>
+        <span id="toastMessage">Success</span>
+    </div>
+
+    <script>
+        // Global State variables
+        let globalActivities = [];
+        let zoomScale = 1;
+        let translateX = 0;
+        let translateY = 0;
+        let isDragging = false;
+        let startX = 0;
+        let startY = 0;
+
+        // Initialize Mermaid
+        mermaid.initialize({
+            startOnLoad: false,
+            securityLevel: 'loose',
+            theme: 'base',
+            themeVariables: {
+                background: 'transparent',
+                primaryColor: 'transparent',
+                edgeColor: '#374151',
+                lineColor: '#374151',
+                transition: 'none'
+            },
+            flowchart: {
+                htmlLabels: true,
+                useMaxWidth: false,
+                curve: 'basis'
+            }
+        });
+
+        // Load Preset examples
+        const presets = {
+            1: `A1, 10, Project Start, 0, 5, 0, 5\nB1, 20, Systems Design, 5, 15, 5, 15\nC1, 30, Core Coding, 15, 30, 15, 30\nD1, 40, QA Testing, 15, 23, 22, 30\nE1, 50, Final Release, 30, 35, 30, 35`,
+            2: `T1, 10, Requirements gathering, 0, 8, 0, 8\nT2, 20, Database Architecture, 8, 12, 14, 18\nT3, 30, Main Core APIs, 8, 20, 8, 20\nT4, 40, Front-End Dev, 12, 18, 18, 24\nT5, 50, Integration Services, 20, 26, 20, 26\nT6, 60, Cloud Deployment, 26, 30, 26, 30`,
+            3: `101, 10, Concept Phase, 0, 10, 0, 10\n102, 20, UI Wireframing, 10, 25, 15, 30\n103, 30, Service Stack, 10, 35, 10, 35\n104, 40, Mobile Native UI, 25, 45, 30, 50\n105, 50, API Integration, 35, 50, 35, 50\n106, 60, Prod Validation, 50, 55, 50, 55`
+        };
+
+        function loadPreset(num) {
+            document.getElementById('activityInput').value = presets[num];
+            generatePDM();
+            showToast("Preset Loaded Successfully");
+        }
+
+        function clearInput() {
+            document.getElementById('activityInput').value = '';
+            showToast("Data Input Cleared");
+        }
+
+        // Helper to generate Mermaid-safe IDs
+        function getSafeId(id) {
+            return 'node_' + String(id).replace(/[^a-z0-9]/gi, '_');
+        }
+
+        function showHelp() {
+            alert("PDM Studio CSV Format:\n\nFormat: Item ID, [Node No (Optional)], Activity Name, ES, EF, LS, LF\n\n- Node No: If omitted, sequence numbers (10, 20, 30...) are automatically assigned.\n- ES: Early Start\n- EF: Early Finish\n- LS: Late Start\n- LF: Late Finish\n\nExample:\nA1, 10, Design Phase, 0, 5, 0, 5\nB1, Coding Phase, 5, 15, 7, 17");
+        }
+
+        // Change App Theme
+        function changeTheme() {
+            const select = document.getElementById('themeSelect');
+            const theme = select.value;
+            
+            document.body.className = '';
+            if (theme !== 'midnight') {
+                document.body.classList.add('theme-' + theme);
+            }
+            
+            // Re-render chart to apply correct theme colors on elements
+            generatePDM();
+        }
+
+        // Parse CSV activities
+        function parseInput(input) {
+            const lines = input.split('\n')
+                .map(line => line.trim())
+                .filter(line => line.length > 0);
+
+            const activities = [];
+            const usedIds = new Set();
+
+            let index = 0;
+            for (const line of lines) {
+                // Robust CSV split that handles potential quotes
+                const parts = line.match(/(".*?"|[^,]+)/g).map(p => p.trim().replace(/^"|"$/g, ''));
+                
+                if (parts.length < 6) continue; 
+
+                // Detect column mapping based on length
+                // Requested format: Item ID, activity, ES, EF, LS, LF (6 cols)
+                // Preset format: Item ID, Node No, activity, ES, EF, LS, LF (7 cols)
+                // Better detection: Check if the 2nd part is numeric. 
+                // If parts[1] is a number and we have at least 7 parts, it's likely the Node No.
+                const hasNodeNo = parts.length >= 7 && !isNaN(parseInt(parts[1]));
+                
+                const id = parts[0];
+                if (id.toLowerCase() === "item id" || id.toLowerCase() === "id") continue;
+
+                if (usedIds.has(id)) {
+                    throw new Error(`Duplicate Item ID found: "${id}" on line ${index + 1}. IDs must be unique.`);
+                }
+
+                const nodeNo = hasNodeNo ? parts[1] : String((index + 1) * 10);
+                const name = hasNodeNo ? parts[2] : parts[1];
+                
+                const esIndex = hasNodeNo ? 3 : 2;
+                const es = parseInt(parts[esIndex]);
+                const ef = parseInt(parts[esIndex + 1]);
+                const ls = parseInt(parts[esIndex + 2]);
+                const lf = parseInt(parts[esIndex + 3]);
+
+                // Validation: Check for numbers and logic consistency
+                if ([es, ef, ls, lf].some(val => isNaN(val))) {
+                    throw new Error(`Line ${index + 1} (${id}): Timing values (ES, EF, LS, LF) must be valid numbers.`);
+                }
+                if (ef < es) {
+                    throw new Error(`Line ${index + 1} (${id}): Early Finish (${ef}) cannot be less than Early Start (${es}).`);
+                }
+                if (lf < ls) {
+                    throw new Error(`Line ${index + 1} (${id}): Late Finish (${lf}) cannot be less than Late Start (${ls}).`);
+                }
+
+                activities.push({
+                    id,
+                    nodeNo,
+                    name,
+                    es, ef, ls, lf,
+                    duration: ef - es,
+                    slack: lf - ef,
+                    preds: []
+                });
+                usedIds.add(id);
+                index++;
+            }
+            return activities;
+        }
+
+        // Precedence calculation (Precedence Diagram Method)
+        function calculatePDM(activities) {
+            if (activities.length === 0) return [];
+
+            // Calculate critical state
+            activities.forEach(a => {
+                a.isCritical = a.slack <= 0;
+            });
+
+            // Find project start node
+            const minES = Math.min(...activities.map(a => a.es));
+            
+            activities.forEach(i => {
+                if (i.es === minES) return; // Project start nodes don't search predecessors
+
+                // Find candidate predecessors (EF <= ES)
+                const candidates = activities.filter(j => j.id !== i.id && j.ef <= i.es);
+                
+                candidates.forEach(j => {
+                    // Filter out redundant transitive dependencies
+                    const isRedundant = candidates.some(k => 
+                        k.id !== j.id && k.id !== i.id && j.ef <= k.es && k.ef <= i.es
+                    );
+                    
+                    if (!isRedundant) {
+                        i.preds.push({
+                            id: j.id,
+                            lag: i.es - j.ef
+                        });
+                    }
+                });
+            });
+
+            return activities;
+        }
+
+        // Generate Mermaid code string with embedded HTML tables
+        function generateMermaid(activities) {
+            const flowDir = document.getElementById('directionSelect').value || 'LR';
+            const theme = document.getElementById('themeSelect').value;
+            
+            // Mermaid's internal parser fails on CSS variables like var(--color-critical).
+            // We map our theme variables to literal hex codes for the parser.
+            const themePalette = {
+                midnight: { critical: '#f43f5e', normal: '#374151' },
+                cyberpunk: { critical: '#ff0055', normal: '#ec4899' },
+                emerald: { critical: '#fb7185', normal: '#15803d' },
+                light: { critical: '#e11d48', normal: '#cbd5e1' }
+            };
+            const palette = themePalette[theme] || themePalette.midnight;
+
+            let code = `flowchart ${flowDir}\n`;
+
+            activities.forEach(a => {
+                const safeId = getSafeId(a.id);
+                const cleanName = a.name.replace(/[<>"/]/g, "'");
+                const cardClass = a.isCritical ? 'critical' : 'normal';
+
+                // Elegant Table design matching the sketch
+                const tableHtml = `
+                    <table class='pdm-node-table ${cardClass}' data-node-id='${a.id}'>
+                        <tr>
+                            <td colspan='2' class='pdm-cell cell-item'>
+                                <span class='cell-val'>${a.id}</span>
+                                <span class='cell-lbl'>Item No.</span>
+                            </td>
+                            <td colspan='2' class='pdm-cell cell-node'>
+                                <span class='cell-val'>${a.nodeNo}</span>
+                                <span class='cell-lbl'>Node No.</span>
+                            </td>
+                            <td colspan='2' class='pdm-cell cell-duration'>
+                                <span class='cell-val'>${a.duration}</span>
+                                <span class='cell-lbl'>Duration</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan='6' class='pdm-cell cell-desc'>${cleanName}</td>
+                        </tr>
+                        <tr>
+                            <td colspan='3' class='pdm-cell cell-es'>
+                                <span class='cell-val'>${a.es}</span>
+                                <span class='cell-lbl'>Early Start</span>
+                            </td>
+                            <td colspan='3' class='pdm-cell cell-ef'>
+                                <span class='cell-val'>${a.ef}</span>
+                                <span class='cell-lbl'>Early Finish</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan='3' class='pdm-cell cell-ls'>
+                                <span class='cell-val'>${a.ls}</span>
+                                <span class='cell-lbl'>Late Start</span>
+                            </td>
+                            <td colspan='3' class='pdm-cell cell-lf'>
+                                <span class='cell-val'>${a.lf}</span>
+                                <span class='cell-lbl'>Late Finish</span>
+                            </td>
+                        </tr>
+                    </table>
+                `.replace(/\s+/g, ' ').trim();
+
+                code += `    ${safeId}["${tableHtml}"]\n`;
+            });
+
+            // Set link arrows and style links
+            let linkIndex = 0;
+            const linkStyles = [];
+
+            activities.forEach(a => {
+                const safeId = getSafeId(a.id);
+                a.preds.forEach(pred => {
+                    const safePId = getSafeId(pred.id);
+                    const predNode = activities.find(act => act.id === pred.id);
+                    const isLinkCritical = a.isCritical && predNode && predNode.isCritical;
+
+                    let arrow = "-->";
+                    if (pred.lag > 0) {
+                        arrow = `-- "Lag: ${pred.lag}" -->`;
+                    } else if (pred.lag < 0) {
+                        arrow = `-- "Lead: ${Math.abs(pred.lag)}" -->`;
+                    }
+                    code += `    ${safePId} ${arrow} ${safeId}\n`;
+
+                    if (isLinkCritical) {
+                        linkStyles.push(`linkStyle ${linkIndex} stroke:${palette.critical},stroke-width:3px,stroke-dasharray:none;`);
+                    } else {
+                        linkStyles.push(`linkStyle ${linkIndex} stroke:${palette.normal},stroke-width:2px,stroke-dasharray:4;`);
+                    }
+                    linkIndex++;
+                });
+            });
+
+            // Set node transparent style to let HTML table design take complete style control
+            activities.forEach(a => {
+                const safeId = getSafeId(a.id);
+                code += `    style ${safeId} fill:none,stroke:none,stroke-width:0px;\n`;
+            });
+
+            code += '\n' + linkStyles.join('\n') + '\n';
+            return code;
+        }
+
+        // Generate PDM main runner
+        async function generatePDM() {
+            const input = document.getElementById('activityInput').value;
+            const container = document.getElementById('diagram');
+            
+            try {
+                let activities = parseInput(input);
+                if (activities.length === 0) {
+                    container.innerHTML = `<div style="padding: 40px; text-align: center; color: var(--text-secondary);">Please enter activity data in the sidebar CSV field.</div>`;
+                    updateStats(0, 0, 0);
+                    return;
+                }
+
+                activities = calculatePDM(activities);
+                globalActivities = activities;
+                const mermaidCode = generateMermaid(activities);
+                
+                container.innerHTML = mermaidCode;
+                container.removeAttribute('data-processed');
+                
+                await mermaid.run({
+                    nodes: [container],
+                });
+
+                // Update Stats Dashboard Widget
+                const totalDuration = Math.max(...activities.map(a => a.ef), 0);
+                const totalNodes = activities.length;
+                const criticalNodes = activities.filter(a => a.isCritical).length;
+                updateStats(totalDuration, totalNodes, criticalNodes);
+
+                // CSS styling modifications post-render
+                colorArrowheadMarkers();
+                setupInteractiveHighlighting();
+                resetZoom();
+                
+            } catch (err) {
+                container.innerHTML = `<div style="color: var(--color-critical); padding: 30px; background-color: rgba(244, 63, 94, 0.05); border: 1px solid var(--color-critical); border-radius: 8px;"><strong>Error Parsing Data:</strong><br/>${err.message}</div>`;
+                updateStats(0, 0, 0);
+                console.error("PDM Generator Error:", err);
+            }
+        }
+
+        // Color Arrowheads matching link color in SVG
+        function colorArrowheadMarkers() {
+            const svg = document.querySelector('#diagram svg');
+            if (!svg) return;
+            
+            const paths = svg.querySelectorAll('.edgePath .path');
+            paths.forEach((path) => {
+                const strokeColor = path.style.stroke || window.getComputedStyle(path).stroke;
+                const markerEnd = path.getAttribute('marker-end');
+                if (markerEnd) {
+                    const markerId = markerEnd.replace(/url\(["']?#|["']?\)/g, '');
+                    const marker = svg.getElementById(markerId);
+                    if (marker) {
+                        const markerPath = marker.querySelector('path');
+                        if (markerPath) {
+                            markerPath.style.fill = strokeColor;
+                            markerPath.style.stroke = 'none';
+                        }
+                    }
+                }
+            });
+        }
+
+        // Interactive chain hover highlighting logic
+        function setupInteractiveHighlighting() {
+            document.querySelectorAll('.pdm-node-table').forEach(table => {
+                table.addEventListener('mouseenter', () => {
+                    const id = table.getAttribute('data-node-id');
+                    highlightNodeChain(id);
+                });
+                table.addEventListener('mouseleave', () => {
+                    clearHighlightChain();
+                });
+            });
+        }
+
+        function highlightNodeChain(targetId) {
+            const activeIds = new Set([targetId]);
+            
+            // Build an adjacency list for successors for faster lookups
+            const successorMap = {};
+            globalActivities.forEach(a => {
+                a.preds.forEach(p => {
+                    if (!successorMap[p.id]) successorMap[p.id] = [];
+                    successorMap[p.id].push(a.id);
+                });
+            });
+            
+            // Find predecessors recursively
+            function findPreds(id) {
+                const node = globalActivities.find(a => a.id === id);
+                if (!node) return;
+                node.preds.forEach(p => {
+                    if (!activeIds.has(p.id)) {
+                        activeIds.add(p.id);
+                        findPreds(p.id);
+                    }
+                });
+            }
+            
+            // Find successors recursively
+            function findSuccs(id) {
+                const succs = successorMap[id] || [];
+                succs.forEach(sId => {
+                    if (!activeIds.has(sId)) {
+                        activeIds.add(sId);
+                        findSuccs(sId);
+                    }
+                });
+            }
+            
+            findPreds(targetId);
+            findSuccs(targetId);
+            
+            // Apply opacity styles to node SVGs
+            const allNodes = document.querySelectorAll('#diagram .node');
+            globalActivities.forEach(a => {
+                const safeId = getSafeId(a.id);
+                allNodes.forEach(el => {
+                    if (el.id !== safeId && !el.id.endsWith('-' + safeId)) return;
+                    if (activeIds.has(a.id)) {
+                        el.style.opacity = '1';
+                        el.style.filter = 'none';
+                    } else {
+                        el.style.opacity = '0.15';
+                        el.style.filter = 'grayscale(80%) blur(1px)';
+                    }
+                    el.style.transition = 'all 0.25s ease';
+                });
+            });
+            
+            // Dim/Highlight connection edge lines
+            const edges = document.querySelectorAll('#diagram .edgePath');
+            edges.forEach(edge => {
+                const classes = Array.from(edge.classList).join(' ');
+                let activeEdge = false;
+                
+                // If the edge connects nodes in the active set, keep it active
+                // Mermaid classes include node IDs like 'ls-node_A1' and 'le-node_B1'
+                let countActiveNodes = 0;
+                activeIds.forEach(id => {
+                    const safeId = 'node_' + id.replace(/[^a-z0-9]/gi, '_');
+                    if (classes.includes(safeId)) {
+                        countActiveNodes++;
+                    }
+                });
+                
+                if (countActiveNodes >= 2) {
+                    edge.style.opacity = '1';
+                } else {
+                    edge.style.opacity = '0.1';
+                }
+                edge.style.transition = 'all 0.25s ease';
+            });
+        }
+
+        function clearHighlightChain() {
+            const elements = document.querySelectorAll('#diagram .node, #diagram .edgePath');
+            elements.forEach(el => {
+                el.style.opacity = '1';
+                el.style.filter = 'none';
+            });
+        }
+
+        // Update Statistics Panel Info
+        function updateStats(duration, total, critical) {
+            document.getElementById('statDuration').innerText = duration;
+            document.getElementById('statNodes').innerText = total;
+            document.getElementById('statCritical').innerText = critical;
+            
+            const ratio = total > 0 ? Math.round((critical / total) * 100) : 0;
+            document.getElementById('statEfficiency').innerText = ratio + '%';
+        }
+
+        // Interactive Zoom & Pan script logic
+        const wrapper = document.getElementById('diagramWrapper');
+        const diagram = document.getElementById('diagram');
+
+        wrapper.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.pdm-node-table')) return; // Avoid drag on button clicks/hover
+            isDragging = true;
+            startX = e.clientX - translateX;
+            startY = e.clientY - translateY;
+        });
+
+        window.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        wrapper.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            translateX = e.clientX - startX;
+            translateY = e.clientY - startY;
+            updateTransform();
+        });
+
+        wrapper.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const zoomIntensity = 0.05;
+            
+            const rect = wrapper.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            const wheel = e.deltaY < 0 ? 1 : -1;
+            const zoomFactor = Math.exp(wheel * zoomIntensity);
+            
+            const newScale = Math.min(Math.max(zoomScale * zoomFactor, 0.15), 3.5);
+            
+            translateX = mouseX - (mouseX - translateX) * (newScale / zoomScale);
+            translateY = mouseY - (mouseY - translateY) * (newScale / zoomScale);
+            zoomScale = newScale;
+            
+            updateTransform();
+        }, { passive: false });
+
+        function adjustZoom(factor) {
+            const wrapperRect = wrapper.getBoundingClientRect();
+            const centerX = wrapperRect.width / 2;
+            const centerY = wrapperRect.height / 2;
+            
+            const newScale = Math.min(Math.max(zoomScale * factor, 0.15), 3.5);
+            
+            translateX = centerX - (centerX - translateX) * (newScale / zoomScale);
+            translateY = centerY - (centerY - translateY) * (newScale / zoomScale);
+            zoomScale = newScale;
+            
+            updateTransform();
+        }
+
+        function resetZoom() {
+            // Find SVG dimensions if loaded and fit it center
+            const svgEl = document.querySelector('#diagram svg');
+            if (svgEl) {
+                const wrapperRect = wrapper.getBoundingClientRect();
+                const svgWidth = svgEl.viewBox.baseVal.width || svgEl.getBoundingClientRect().width;
+                const svgHeight = svgEl.viewBox.baseVal.height || svgEl.getBoundingClientRect().height;
+                
+                // Fit scale
+                const scaleX = (wrapperRect.width - 60) / svgWidth;
+                const scaleY = (wrapperRect.height - 60) / svgHeight;
+                zoomScale = Math.min(Math.min(scaleX, scaleY), 1.0); // Fit completely, max zoom 1.0
+                
+                translateX = (wrapperRect.width - svgWidth * zoomScale) / 2;
+                translateY = (wrapperRect.height - svgHeight * zoomScale) / 2;
+            } else {
+                zoomScale = 1;
+                translateX = 0;
+                translateY = 0;
+            }
+            updateTransform();
+        }
+
+        function updateTransform() {
+            diagram.style.transform = `translate(${translateX}px, ${translateY}px) scale(${zoomScale})`;
+        }
+
+        // Export Functionality
+        function copyMermaidCode() {
+            const svgEl = document.querySelector('#diagram svg');
+            if (!svgEl) {
+                showToast("No active diagram to copy", true);
+                return;
+            }
+            const mermaidMarkup = generateMermaid(globalActivities);
+            navigator.clipboard.writeText(mermaidMarkup).then(() => {
+                showToast("Mermaid markup copied to clipboard");
+            }).catch(err => {
+                showToast("Failed to copy text", true);
+            });
+        }
+
+        function downloadSVG() {
+            const svgEl = document.querySelector('#diagram svg');
+            if (!svgEl) {
+                showToast("No active diagram to export", true);
+                return;
+            }
+            
+            // Build a clean stylesheet to embed in the SVG so fonts and colors transfer correctly
+            const styles = Array.from(document.styleSheets)
+                .map(styleSheet => {
+                    try {
+                        return Array.from(styleSheet.cssRules)
+                            .map(rule => rule.cssText)
+                            .join('\n');
+                    } catch (e) {
+                        return '';
+                    }
+                })
+                .join('\n');
+            
+            const svgClone = svgEl.cloneNode(true);
+            const styleElement = document.createElement('style');
+            styleElement.textContent = styles;
+            svgClone.insertBefore(styleElement, svgClone.firstChild);
+            
+            const svgString = new XMLSerializer().serializeToString(svgClone);
+            const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'pdm_diagram.svg';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            showToast("SVG Exported Successfully");
+        }
+
+        function downloadPNG() {
+            const svgEl = document.querySelector('#diagram svg');
+            if (!svgEl) {
+                showToast("No active diagram to export", true);
+                return;
+            }
+
+            // High-quality render: extract stylesheet and clone SVG
+            const styles = Array.from(document.styleSheets)
+                .map(styleSheet => {
+                    try {
+                        return Array.from(styleSheet.cssRules)
+                            .map(rule => rule.cssText)
+                            .join('\n');
+                    } catch (e) {
+                        return '';
+                    }
+                })
+                .join('\n');
+            
+            const svgClone = svgEl.cloneNode(true);
+            const styleElement = document.createElement('style');
+            styleElement.textContent = styles;
+            svgClone.insertBefore(styleElement, svgClone.firstChild);
+            
+            const svgString = new XMLSerializer().serializeToString(svgClone);
+            const svgSize = svgEl.getBoundingClientRect();
+            
+            const img = new Image();
+            const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(svgBlob);
+            
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                const scale = 2; // Increase scale for HD resolution
+                canvas.width = svgSize.width * scale;
+                canvas.height = svgSize.height * scale;
+                
+                const ctx = canvas.getContext('2d');
+                ctx.scale(scale, scale);
+                
+                // Draw theme background
+                const computedStyle = window.getComputedStyle(document.body);
+                ctx.fillStyle = computedStyle.getPropertyValue('--bg-viewport').trim() || '#0b0f19';
+                ctx.fillRect(0, 0, svgSize.width, svgSize.height);
+                
+                ctx.drawImage(img, 0, 0);
+                
+                const pngUrl = canvas.toDataURL('image/png');
+                const link = document.createElement('a');
+                link.href = pngUrl;
+                link.download = 'pdm_diagram.png';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                URL.revokeObjectURL(url);
+                showToast("PNG Exported Successfully");
+            };
+            
+            img.onerror = function() {
+                showToast("Error exporting PNG (foreignObject restrictions)", true);
+            };
+            
+            img.src = url;
+        }
+
+        // Notification Toast triggers
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMessage');
+            const toastIcon = document.getElementById('toastIcon');
+            
+            toastMsg.innerText = message;
+            if (isError) {
+                toast.classList.add('error');
+                toastIcon.innerHTML = `<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>`;
+            } else {
+                toast.classList.remove('error');
+                toastIcon.innerHTML = `<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>`;
+            }
+            
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Initial run on window load
+        window.onload = function() {
+            generatePDM();
+        };
+    </script>
+</body>
+</html>
