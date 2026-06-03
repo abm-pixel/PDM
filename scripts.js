@@ -13,6 +13,8 @@ let syncInterval = null;
 let isCriticalPathFocused = false;
 let activeTab = 'diagram';
 let previousCalcMode = 'manual';
+let currentEditTaskId = null;
+let scurveChartInstance = null;
 
 // Initialize Mermaid
 mermaid.initialize({
@@ -673,6 +675,8 @@ async function generatePDM() {
             renderBarChart(globalActivities);
         } else if (activeTab === 'analysis') {
             renderAnalysis(globalActivities);
+        } else if (activeTab === 'scurve') {
+            renderSCurve(globalActivities);
         }
         
     } catch (err) {
@@ -723,6 +727,8 @@ function switchTab(tabId) {
         renderBarChart(globalActivities);
     } else if (tabId === 'analysis') {
         renderAnalysis(globalActivities);
+    } else if (tabId === 'scurve') {
+        renderSCurve(globalActivities);
     }
 }
 
@@ -751,13 +757,19 @@ function renderBarChart(activities) {
         const isCritical = a.isCritical;
         const idClass = isCritical ? 'critical' : '';
         tasksHtml += `
-                <div class="gantt-task-row">
+                        <div class="gantt-task-row" style="position: relative;">
                     <div class="gantt-task-name" title="${a.name}">${a.name}</div>
                     <div class="gantt-task-meta">
                         <span class="gantt-task-id ${idClass}">${a.id}</span>
                         <span>Dur: ${a.duration}</span>
                         <span>Slack: ${a.slack}</span>
                     </div>
+                            <button class="float-btn" onclick="openEditModal('${a.id}')" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px;">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                </svg>
+                            </button>
                 </div>
         `;
     });
@@ -875,6 +887,14 @@ function renderAnalysis(activities) {
                     <td>${node.ef}</td>
                     <td>${node.ls}</td>
                     <td>${node.lf}</td>
+                            <td style="text-align: right;">
+                                <button class="float-btn" onclick="openEditModal('${node.id}')" style="display: inline-flex; width: 24px; height: 24px;">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                    </svg>
+                                </button>
+                            </td>
                 </tr>
             `;
         });
@@ -966,6 +986,7 @@ function renderAnalysis(activities) {
                                 <th>EF</th>
                                 <th>LS</th>
                                 <th>LF</th>
+                                        <th style="width: 40px;"></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1001,6 +1022,112 @@ function renderAnalysis(activities) {
     container.innerHTML = html;
 }
 
+/**
+ * Renders the S-Curve graph showing early and late cumulative progress
+ */
+function renderSCurve(activities) {
+    const canvas = document.getElementById('scurveChart');
+    if (!canvas) return;
+
+    if (activities.length === 0) {
+        return;
+    }
+
+    // Calculate timeline data
+    const projectDuration = Math.max(...activities.map(a => a.lf), 0);
+    const labels = Array.from({length: projectDuration + 1}, (_, i) => i);
+    
+    // Prepare work distribution buckets
+    const earlyWork = new Array(projectDuration + 1).fill(0);
+    const lateWork = new Array(projectDuration + 1).fill(0);
+    
+    activities.forEach(a => {
+        // We assume 1 unit of work per time unit of duration
+        for (let t = a.es; t < a.ef; t++) earlyWork[t + 1]++;
+        for (let t = a.ls; t < a.lf; t++) lateWork[t + 1]++;
+    });
+    
+    // Calculate Cumulative Progress (S-Curve)
+    const cumulEarly = [];
+    const cumulLate = [];
+    let sumE = 0, sumL = 0;
+    for (let i = 0; i <= projectDuration; i++) {
+        sumE += earlyWork[i];
+        sumL += lateWork[i];
+        cumulEarly.push(sumE);
+        cumulLate.push(sumL);
+    }
+
+    // Destroy previous chart instance if it exists
+    if (scurveChartInstance) {
+        scurveChartInstance.destroy();
+    }
+
+    // Get theme colors from CSS variables
+    const style = getComputedStyle(document.body);
+    const colorEarly = style.getPropertyValue('--color-normal').trim() || '#38bdf8';
+    const colorLate = style.getPropertyValue('--color-critical').trim() || '#f43f5e';
+    const textColor = style.getPropertyValue('--text-primary').trim() || '#f9fafb';
+    const borderColor = style.getPropertyValue('--border-primary').trim() || '#374151';
+
+    // Create Chart
+    scurveChartInstance = new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Early Schedule (Target)',
+                    data: cumulEarly,
+                    borderColor: colorEarly,
+                    backgroundColor: colorEarly + '20', // Add transparency
+                    fill: true,
+                    tension: 0.3,
+                    borderWidth: 3,
+                    pointRadius: 2
+                },
+                {
+                    label: 'Late Schedule (Limit)',
+                    data: cumulLate,
+                    borderColor: colorLate,
+                    backgroundColor: colorLate + '10',
+                    fill: true,
+                    tension: 0.3,
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    pointRadius: 0
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: { color: textColor, font: { family: 'Inter', size: 12 } }
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false
+                }
+            },
+            scales: {
+                x: {
+                    title: { display: true, text: 'Project Timeline', color: textColor },
+                    ticks: { color: textColor },
+                    grid: { color: borderColor }
+                },
+                y: {
+                    title: { display: true, text: 'Cumulative Work Units', color: textColor },
+                    ticks: { color: textColor },
+                    grid: { color: borderColor },
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
 // Color Arrowheads matching link color in SVG
 function colorArrowheadMarkers() {
     const svg = document.querySelector('#diagram svg');
@@ -1034,6 +1161,11 @@ function setupInteractiveHighlighting() {
         table.addEventListener('mouseleave', () => {
             clearHighlightChain();
         });
+                table.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const id = table.getAttribute('data-node-id');
+                    openEditModal(id);
+                });
     });
 }
 
@@ -1125,6 +1257,94 @@ function clearHighlightChain() {
     });
     isCriticalPathFocused = false;
 }
+
+        function openEditModal(taskId) {
+            const task = globalActivities.find(a => a.id === taskId);
+            if (!task) return;
+
+            currentEditTaskId = taskId;
+            document.getElementById('editTaskIdLabel').innerText = taskId;
+            document.getElementById('editTaskName').value = task.name;
+
+            const calcMode = document.getElementById('calcModeSelect').value;
+            const autoControls = document.getElementById('autoModeEditControls');
+
+            if (calcMode === 'auto') {
+                autoControls.style.display = 'block';
+                document.getElementById('editTaskDuration').value = task.duration;
+                document.getElementById('editTaskPredecessors').value = task.predecessorIds.join(';');
+                
+                const successors = globalActivities
+                    .filter(a => a.predecessorIds && a.predecessorIds.includes(taskId))
+                    .map(a => a.id);
+                document.getElementById('editTaskSuccessors').value = successors.join(';');
+            } else {
+                autoControls.style.display = 'none';
+            }
+
+            document.getElementById('editModal').classList.add('show');
+        }
+
+        function closeModal() {
+            document.getElementById('editModal').classList.remove('show');
+            currentEditTaskId = null;
+        }
+
+        function saveTaskChanges() {
+            if (!currentEditTaskId) return;
+
+            const name = document.getElementById('editTaskName').value;
+            const calcMode = document.getElementById('calcModeSelect').value;
+            const taskIndex = globalActivities.findIndex(a => a.id === currentEditTaskId);
+            
+            if (taskIndex === -1) return;
+            globalActivities[taskIndex].name = name;
+
+            if (calcMode === 'auto') {
+                const duration = parseInt(document.getElementById('editTaskDuration').value);
+                const predIds = document.getElementById('editTaskPredecessors').value.split(/[;|]/).map(p => p.trim()).filter(p => p.length > 0);
+                const succIds = document.getElementById('editTaskSuccessors').value.split(/[;|]/).map(p => p.trim()).filter(p => p.length > 0);
+
+                if (isNaN(duration) || duration < 0) {
+                    showToast("Invalid duration", true);
+                    return;
+                }
+
+                globalActivities[taskIndex].duration = duration;
+                globalActivities[taskIndex].predecessorIds = predIds;
+
+                globalActivities.forEach(otherTask => {
+                    if (otherTask.id === currentEditTaskId) return;
+                    const isCurrentlySuccessor = otherTask.predecessorIds && otherTask.predecessorIds.includes(currentEditTaskId);
+                    const shouldBeSuccessor = succIds.includes(otherTask.id);
+
+                    if (shouldBeSuccessor && !isCurrentlySuccessor) {
+                        otherTask.predecessorIds.push(currentEditTaskId);
+                    } else if (!shouldBeSuccessor && isCurrentlySuccessor) {
+                        otherTask.predecessorIds = otherTask.predecessorIds.filter(id => id !== currentEditTaskId);
+                    }
+                });
+            }
+
+            updateInputFromActivities();
+            generatePDM();
+            closeModal();
+            showToast("Task updated");
+        }
+
+        function updateInputFromActivities() {
+            const calcMode = document.getElementById('calcModeSelect').value;
+            let csv = "";
+            globalActivities.forEach(a => {
+                if (calcMode === 'auto') {
+                    const preds = a.predecessorIds.length > 0 ? a.predecessorIds.join(';') : "-";
+                    csv += `${a.id}, ${a.nodeNo}, ${a.name}, ${a.duration}, ${preds}\n`;
+                } else {
+                    csv += `${a.id}, ${a.nodeNo}, ${a.name}, ${a.es}, ${a.ef}, ${a.ls}, ${a.lf}\n`;
+                }
+            });
+            document.getElementById('activityInput').value = csv.trim();
+        }
 
 // Update Statistics Panel Info
 function updateStats(duration, total, critical) {

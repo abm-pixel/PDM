@@ -681,6 +681,14 @@ body.theme-light .tab-btn.active {
     overflow-y: auto;
     background-color: var(--bg-viewport);
 }
+.scurve-container-wrapper {
+    flex: 1;
+    padding: 24px;
+    overflow-y: auto;
+    background-color: var(--bg-viewport);
+    display: flex;
+    flex-direction: column;
+}
 .gantt-chart {
     display: flex;
     background-color: var(--bg-card);
@@ -962,3 +970,47 @@ body.theme-light .risk-item {
     font-size: 11px;
     color: var(--text-secondary);
 }
+
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+.modal-overlay.show {
+    display: flex;
+}
+.modal-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-primary);
+    border-radius: 12px;
+    width: 400px;
+    max-width: 90%;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+}
+.modal-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-primary);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.close-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 24px;
+    cursor: pointer;
+}
+.modal-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.modal-footer { padding: 16px 20px; border-top: 1px solid var(--border-primary); display: flex; justify-content: flex-end; gap: 12px; }

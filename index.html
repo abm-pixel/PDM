@@ -12,6 +12,8 @@
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
     <!-- SheetJS for Excel Support -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Chart.js for S-Curve -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -182,6 +184,13 @@ E1, 50, Release, 30, 35, 30, 35</textarea>
                         </svg>
                         Critical Path Analysis
                     </button>
+                    <button class="tab-btn" id="tabBtn_scurve" onclick="switchTab('scurve')">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M12 20V10M18 20V4M6 20v-4" />
+                            <path d="M3 20h18" />
+                        </svg>
+                        S-Curve Analysis
+                    </button>
                 </div>
                 <!-- Export buttons toolbar -->
                 <div class="export-toolbar-container" style="display: flex; gap: 8px;">
@@ -249,6 +258,23 @@ E1, 50, Release, 30, 35, 30, 35</textarea>
             <div id="tabContent_analysis" class="tab-content">
                 <div class="analysis-container-wrapper" id="analysisContainer"></div>
             </div>
+
+            <!-- Tab Content: S-Curve Analysis -->
+            <div id="tabContent_scurve" class="tab-content">
+                <div class="scurve-container-wrapper" id="scurveContainer">
+                    <div class="analysis-card" style="margin: 0; flex: 1; display: flex; flex-direction: column; min-height: 0;">
+                        <h3>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                            </svg>
+                            Cumulative Progress (S-Curve)
+                        </h3>
+                        <div style="flex: 1; min-height: 0; position: relative; padding: 10px;">
+                            <canvas id="scurveChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -260,6 +286,40 @@ E1, 50, Release, 30, 35, 30, 35</textarea>
             <line x1="12" y1="8" x2="12.01" y2="8" />
         </svg>
         <span id="toastMessage">Success</span>
+    </div>
+
+    <!-- Task Edit Modal -->
+    <div id="editModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Edit Task: <span id="editTaskIdLabel"></span></h3>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="control-group">
+                    <label for="editTaskName">Activity Name</label>
+                    <input type="text" id="editTaskName">
+                </div>
+                <div id="autoModeEditControls">
+                    <div class="control-group">
+                        <label for="editTaskDuration">Duration</label>
+                        <input type="text" id="editTaskDuration">
+                    </div>
+                    <div class="control-group">
+                        <label for="editTaskPredecessors">Predecessors (IDs separated by ;)</label>
+                        <input type="text" id="editTaskPredecessors" placeholder="e.g. A1;B1">
+                    </div>
+                    <div class="control-group">
+                        <label for="editTaskSuccessors">Successors (IDs separated by ;)</label>
+                        <input type="text" id="editTaskSuccessors" placeholder="e.g. C1;D1">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveTaskChanges()">Save Changes</button>
+            </div>
+        </div>
     </div>
 
     <script src="scripts.js"></script>
